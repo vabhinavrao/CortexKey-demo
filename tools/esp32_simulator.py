@@ -104,6 +104,22 @@ class ESP32Simulator:
         elif cmd == "MOCK_IMP":
             self._mock = "impostor"
             self.emit("CMD:MOCK_IMP_SET")
+        elif cmd in ("BTN_A", "BTN_A_PRESS"):
+            # GPIO18 — User A (enrolled) pressed
+            self._mock  = "auth"
+            self._mode  = "auth"
+            self._count = 0
+            self._start = time.time()
+            self.emit("CMD:BTN_A_PRESSED")
+            self.emit("CMD:AUTH_STARTED")
+        elif cmd in ("BTN_B", "BTN_B_PRESS"):
+            # GPIO19 — User B (impostor) pressed
+            self._mock  = "impostor"
+            self._mode  = "auth"
+            self._count = 0
+            self._start = time.time()
+            self.emit("CMD:BTN_B_PRESSED")
+            self.emit("CMD:AUTH_STARTED")
         elif cmd == "STATUS":
             mode_str = {"idle": "IDLE", "streaming": "STREAMING", "auth": "AUTH"}[self._mode]
             mock_str = "AUTH" if self._mock == "auth" else "IMP"

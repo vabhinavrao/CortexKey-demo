@@ -88,8 +88,6 @@ def auth_start():
     if not reader.connected:
         reader.connect()
     reader.start()
-    # Flush stale buffer and tell ESP32/simulator to start auth scan
-    reader.flush_buffer()
     reader.send_command("START_AUTH")
 
     _start_push_loop()

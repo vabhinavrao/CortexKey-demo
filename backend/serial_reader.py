@@ -14,7 +14,6 @@ When the BioAmp EXG Pill arrives:
   4. Everything else (filters, ML, frontend) stays identical.
 """
 
-import os
 import threading
 import time
 import collections
@@ -27,15 +26,14 @@ try:
 except ImportError:
     HAS_SERIAL = False
 
+from eeg_pipeline import generate_auth_user, generate_impostor
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 FS = 250
 WINDOW_SIZE = 500          # 2 seconds
 BAUD = 115200
-
-# Env var override: CORTEXKEY_PORT=/dev/ttys003  python backend/app.py
-_ENV_PORT = os.environ.get("CORTEXKEY_PORT")
 
 # Keywords that identify an ESP32 / CH340 / CP210x serial port
 _ESP32_PORT_HINTS = [
@@ -117,7 +115,7 @@ class SerialReader:
           2. Auto-detected ESP32 port (CH340 / CP210x)
           3. Fall back to mock mode
         """
-        target_port = port or _ENV_PORT or _find_esp32_port()
+        target_port = port or _find_esp32_port()
 
         if target_port and HAS_SERIAL:
             try:
@@ -145,25 +143,16 @@ class SerialReader:
         """Drain any ESP32 startup banner lines (CMD:... lines)."""
         if not self._serial:
             return
-        deadline = time.time() + 3.0
+        deadline = time.time() + 2.0
         while time.time() < deadline:
             try:
-                raw = self._serial.readline()
-                if not raw:
-                    time.sleep(0.05)
-                    continue
-                line = raw.decode("utf-8", errors="replace").strip()
+                line = self._serial.readline().decode("utf-8", errors="replace").strip()
                 if line:
                     print(f"[serial] ESP32 → {line}")
-                if "CORTEXKEY_READY" in line:
+                if line == "CMD:CORTEXKEY_READY":
                     break
             except Exception:
                 break
-        # Kick the ESP32 into continuous streaming mode immediately
-        try:
-            self._serial.write(b"START\n")
-        except Exception:
-            pass
 
     def start(self):
         """Begin reading (in a background thread)."""
@@ -192,12 +181,8 @@ class SerialReader:
         """
         Switch mock data between 'auth' and 'impostor'.
         Also relays the command to the ESP32 if connected over serial.
-        Flushes the signal buffer so stale data doesn't pollute the next scan.
         """
         self._mock_mode = mode
-        # Flush buffer so old signal doesn't bleed into next scan
-        with self._lock:
-            self._buffer.clear()
         if self._serial and self._serial.is_open:
             cmd = "MOCK_AUTH\n" if mode == "auth" else "MOCK_IMP\n"
             try:
@@ -239,11 +224,6 @@ class SerialReader:
             "samples": len(data),
         }
 
-    def flush_buffer(self):
-        """Clear the sample ring buffer (call before each new scan)."""
-        with self._lock:
-            self._buffer.clear()
-
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
@@ -266,13 +246,10 @@ class SerialReader:
             try:
                 raw_line = self._serial.readline()
                 if not raw_line:
-                    # PTY / serial can return empty on no-data; small sleep
-                    time.sleep(0.004)
                     consecutive_errors += 1
-                    if consecutive_errors > 500:   # ~2s of silence
+                    if consecutive_errors > 50:
                         print("[serial] Too many empty reads — reconnecting…")
                         self._reconnect()
-                        consecutive_errors = 0
                     continue
                 consecutive_errors = 0
 
