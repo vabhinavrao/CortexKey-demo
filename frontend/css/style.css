@@ -1,0 +1,309 @@
+/* ================================================================
+   CortexKey — Dark Sci-Fi / Medical Dashboard Theme
+   ================================================================ */
+
+/* --- Custom Properties ----------------------------------------- */
+:root {
+    --bg:          #0a0e17;
+    --bg-panel:    #111827;
+    --bg-panel-hi: #1a2236;
+    --border:      #1e293b;
+    --text:        #e2e8f0;
+    --text-dim:    #94a3b8;
+    --cyan:        #22d3ee;
+    --green:       #34d399;
+    --purple:      #a78bfa;
+    --red:         #f87171;
+    --yellow:      #fbbf24;
+    --orange:      #fb923c;
+    --font:        'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    --radius:      10px;
+    --glow-cyan:   0 0 12px rgba(34,211,238,0.35);
+    --glow-green:  0 0 12px rgba(52,211,153,0.35);
+}
+
+/* --- Reset ----------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* --- Top Bar --------------------------------------------------- */
+#topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1.4rem;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+.topbar-left h1 {
+    font-size: 1.15rem;
+    letter-spacing: 3px;
+    color: var(--cyan);
+    font-weight: 700;
+}
+.topbar-right {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.status-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--yellow);
+    display: inline-block;
+    box-shadow: 0 0 6px var(--yellow);
+    transition: background 0.4s, box-shadow 0.4s;
+}
+.status-dot.online  { background: var(--green);  box-shadow: 0 0 6px var(--green);  }
+.status-dot.offline { background: var(--red);    box-shadow: 0 0 6px var(--red);    }
+
+.status-text {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+/* --- Buttons --------------------------------------------------- */
+.btn {
+    padding: 0.45rem 1rem;
+    font-family: var(--font);
+    font-size: 0.78rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+}
+.btn-primary {
+    background: var(--cyan);
+    color: #0a0e17;
+    font-weight: 700;
+    box-shadow: var(--glow-cyan);
+}
+.btn-primary:hover { filter: brightness(1.15); }
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: none;
+}
+.btn-outline {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+}
+.btn-outline:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+}
+.btn-outline.active {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(34,211,238,0.08);
+}
+
+/* --- Grid Layout ----------------------------------------------- */
+#grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto 1fr;
+    gap: 0.8rem;
+    padding: 0.8rem 1.4rem 1.4rem;
+    max-width: 1280px;
+    margin: 0 auto;
+}
+#oscilloscopePanel { grid-column: 1; grid-row: 1; }
+#confidencePanel   { grid-column: 2; grid-row: 1; }
+#bandPanel         { grid-column: 1; grid-row: 2; }
+#statusPanel       { grid-column: 2; grid-row: 2; }
+#logPanel          { grid-column: 1 / -1; grid-row: 3; }
+
+/* --- Panel ----------------------------------------------------- */
+.panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+}
+.panel-title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 0.7rem;
+}
+
+/* --- Oscilloscope ---------------------------------------------- */
+#scopeCanvas {
+    width: 100%;
+    height: 220px;
+    border-radius: 6px;
+    background:
+        linear-gradient(rgba(34,211,238,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34,211,238,0.04) 1px, transparent 1px),
+        var(--bg);
+    background-size: 20px 20px;
+}
+
+/* --- Band Power Bars ------------------------------------------- */
+.band-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.65rem;
+}
+.band-label {
+    width: 120px;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    flex-shrink: 0;
+}
+.bar-track {
+    flex: 1;
+    height: 14px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 7px;
+    overflow: hidden;
+}
+.bar-fill {
+    height: 100%;
+    border-radius: 7px;
+    width: 0%;
+    transition: width 0.35s ease;
+}
+.bar-fill.theta  { background: var(--purple); box-shadow: inset 0 0 8px rgba(167,139,250,0.5); }
+.bar-fill.alpha  { background: var(--cyan);   box-shadow: inset 0 0 8px rgba(34,211,238,0.5); }
+.bar-fill.beta   { background: var(--green);  box-shadow: inset 0 0 8px rgba(52,211,153,0.5); }
+.band-value {
+    width: 48px;
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--text);
+}
+
+/* --- Confidence Gauge ------------------------------------------ */
+.gauge-wrap {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin: 0 auto;
+}
+.gauge-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+.gauge-bg {
+    fill: none;
+    stroke: rgba(255,255,255,0.06);
+    stroke-width: 12;
+}
+.gauge-fg {
+    fill: none;
+    stroke: var(--cyan);
+    stroke-width: 12;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.4s ease, stroke 0.4s ease;
+    filter: drop-shadow(0 0 6px rgba(34,211,238,0.4));
+}
+.gauge-threshold {
+    stroke: var(--yellow);
+    stroke-width: 2;
+    opacity: 0.6;
+}
+.gauge-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+}
+.gauge-label span {
+    font-size: 1rem;
+    color: var(--text-dim);
+}
+
+/* --- Status Card ----------------------------------------------- */
+.status-card {
+    text-align: center;
+    padding: 1.5rem 0;
+}
+.status-icon {
+    font-size: 2.6rem;
+    margin-bottom: 0.5rem;
+    transition: transform 0.3s;
+}
+.status-msg {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+    letter-spacing: 1px;
+}
+.status-sub {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+/* Authentication result animations */
+.status-card.authenticated .status-msg { color: var(--green); }
+.status-card.denied        .status-msg { color: var(--red); }
+.status-card.scanning      .status-icon { animation: pulse 1.2s ease-in-out infinite; }
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.15); opacity: 0.7; }
+}
+
+/* --- Log ------------------------------------------------------- */
+.log-scroll {
+    flex: 1;
+    min-height: 100px;
+    max-height: 160px;
+    overflow-y: auto;
+    font-size: 0.72rem;
+    line-height: 1.7;
+    color: var(--text-dim);
+    padding: 0.4rem 0;
+}
+.log-scroll::-webkit-scrollbar { width: 5px; }
+.log-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.log-entry { padding: 0 0.2rem; }
+.log-entry.success { color: var(--green); }
+.log-entry.error   { color: var(--red); }
+.log-entry.info    { color: var(--text-dim); }
+.log-entry .ts     { color: #475569; margin-right: 0.4rem; }
+
+/* --- Responsive ------------------------------------------------ */
+@media (max-width: 800px) {
+    #grid {
+        grid-template-columns: 1fr;
+    }
+    #oscilloscopePanel,
+    #confidencePanel,
+    #bandPanel,
+    #statusPanel,
+    #logPanel {
+        grid-column: 1;
+        grid-row: auto;
+    }
+    .topbar-right { flex-wrap: wrap; }
+}

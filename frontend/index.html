@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CortexKey — Neural Authentication</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <!-- ================================================================ -->
+    <!-- TOP BAR                                                          -->
+    <!-- ================================================================ -->
+    <header id="topbar">
+        <div class="topbar-left">
+            <svg class="logo" viewBox="0 0 32 32" width="28" height="28">
+                <circle cx="16" cy="16" r="14" stroke="var(--cyan)" stroke-width="2" fill="none"/>
+                <path d="M10 20 Q16 6 22 20" stroke="var(--cyan)" stroke-width="2" fill="none"/>
+                <circle cx="16" cy="14" r="3" fill="var(--cyan)" opacity="0.8"/>
+            </svg>
+            <h1>CORTEXKEY</h1>
+            <span class="status-dot" id="connectionDot"></span>
+            <span class="status-text" id="connectionText">Connecting…</span>
+        </div>
+        <div class="topbar-right">
+            <button class="btn btn-outline" id="btnMockAuth">Mock Authenticated</button>
+            <button class="btn btn-outline" id="btnMockImp">Mock Impostor</button>
+            <button class="btn btn-primary" id="btnStartAuth">Start Authentication</button>
+        </div>
+    </header>
+
+    <!-- ================================================================ -->
+    <!-- MAIN GRID                                                        -->
+    <!-- ================================================================ -->
+    <main id="grid">
+        <!-- LEFT COLUMN -->
+        <section class="panel" id="oscilloscopePanel">
+            <h2 class="panel-title">Live EEG Waveform</h2>
+            <canvas id="scopeCanvas" width="600" height="220"></canvas>
+        </section>
+
+        <section class="panel" id="bandPanel">
+            <h2 class="panel-title">Band Powers</h2>
+            <div class="band-row">
+                <span class="band-label">Theta (4-8 Hz)</span>
+                <div class="bar-track"><div class="bar-fill theta" id="barTheta"></div></div>
+                <span class="band-value" id="valTheta">0.00</span>
+            </div>
+            <div class="band-row">
+                <span class="band-label">Alpha (8-13 Hz)</span>
+                <div class="bar-track"><div class="bar-fill alpha" id="barAlpha"></div></div>
+                <span class="band-value" id="valAlpha">0.00</span>
+            </div>
+            <div class="band-row">
+                <span class="band-label">Beta (13-30 Hz)</span>
+                <div class="bar-track"><div class="bar-fill beta" id="barBeta"></div></div>
+                <span class="band-value" id="valBeta">0.00</span>
+            </div>
+        </section>
+
+        <!-- RIGHT COLUMN -->
+        <section class="panel" id="confidencePanel">
+            <h2 class="panel-title">Confidence</h2>
+            <div class="gauge-wrap">
+                <svg viewBox="0 0 200 200" class="gauge-svg" id="gaugeSvg">
+                    <circle cx="100" cy="100" r="85" class="gauge-bg"/>
+                    <circle cx="100" cy="100" r="85" class="gauge-fg" id="gaugeArc"
+                            stroke-dasharray="534" stroke-dashoffset="534"/>
+                    <!-- threshold line at 65 % -->
+                    <line x1="100" y1="18" x2="100" y2="28" class="gauge-threshold"
+                          transform="rotate(234, 100, 100)"/>
+                </svg>
+                <div class="gauge-label" id="gaugeLabel">0<span>%</span></div>
+            </div>
+        </section>
+
+        <section class="panel" id="statusPanel">
+            <div class="status-card" id="statusCard">
+                <div class="status-icon" id="statusIcon">🧠</div>
+                <div class="status-msg" id="statusMsg">Ready to scan</div>
+                <div class="status-sub" id="statusSub">Place electrodes and press Start</div>
+            </div>
+        </section>
+
+        <!-- FULL-WIDTH LOG -->
+        <section class="panel" id="logPanel">
+            <h2 class="panel-title">System Log</h2>
+            <div class="log-scroll" id="logScroll"></div>
+        </section>
+    </main>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
