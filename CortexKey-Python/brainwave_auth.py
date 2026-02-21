@@ -396,20 +396,22 @@ class MockDataGenerator:
         - Small delta (0.5-4 Hz) component: ~5 µV
         - Pink noise background: ~3-5 µV
         - Occasional artifacts (realistic but not disruptive)
+        
+        NOTE: Frequencies are divided by 5 for better visualization (slower waves)
         """
-        # Core frequency components with individual phase offsets
-        delta = 4.0 * np.sin(2 * np.pi * 2.5 * t + self._phase_offsets[0])
-        theta = 12.0 * np.sin(2 * np.pi * self._theta_freq * t + self._phase_offsets[1])
-        alpha = self._alpha_amp * np.sin(2 * np.pi * self._alpha_freq * t + self._phase_offsets[2])
-        beta = 6.0 * np.sin(2 * np.pi * self._beta_freq * t + self._phase_offsets[3])
-        gamma = 2.5 * np.sin(2 * np.pi * 35 * t + self._phase_offsets[4])
+        # Core frequency components with individual phase offsets (5x slower for visibility)
+        delta = 4.0 * np.sin(2 * np.pi * (2.5 / 5.0) * t + self._phase_offsets[0])
+        theta = 12.0 * np.sin(2 * np.pi * (self._theta_freq / 5.0) * t + self._phase_offsets[1])
+        alpha = self._alpha_amp * np.sin(2 * np.pi * (self._alpha_freq / 5.0) * t + self._phase_offsets[2])
+        beta = 6.0 * np.sin(2 * np.pi * (self._beta_freq / 5.0) * t + self._phase_offsets[3])
+        gamma = 2.5 * np.sin(2 * np.pi * (35 / 5.0) * t + self._phase_offsets[4])
         
-        # Alpha harmonics (realistic non-sinusoidal waves)
-        alpha_harmonic = 3.0 * np.sin(2 * np.pi * self._alpha_freq * 2 * t + self._phase_offsets[2])
+        # Alpha harmonics (realistic non-sinusoidal waves) - also 5x slower
+        alpha_harmonic = 3.0 * np.sin(2 * np.pi * (self._alpha_freq * 2 / 5.0) * t + self._phase_offsets[2])
         
-        # Amplitude modulation (alpha blocking/enhancement - realistic variation)
-        alpha_modulation = 1.0 + 0.15 * np.sin(2 * np.pi * 0.1 * t)  # 0.1 Hz modulation
-        theta_modulation = 1.0 + 0.1 * np.sin(2 * np.pi * 0.15 * t + 1.2)
+        # Amplitude modulation (alpha blocking/enhancement - realistic variation) - also slower
+        alpha_modulation = 1.0 + 0.15 * np.sin(2 * np.pi * (0.1 / 5.0) * t)  # 0.02 Hz modulation (5x slower)
+        theta_modulation = 1.0 + 0.1 * np.sin(2 * np.pi * (0.15 / 5.0) * t + 1.2)
         
         # Realistic background noise (pink noise, not white)
         pink_noise = self._generate_pink_noise() * 3.5
@@ -448,15 +450,17 @@ class MockDataGenerator:
         - More muscle artifacts and movement
         - Inconsistent amplitude and frequency
         - Elevated beta (stress/anxiety)
+        
+        NOTE: Frequencies are divided by 5 for better visualization (slower waves)
         """
-        # Different frequency components (different person's brain)
+        # Different frequency components (different person's brain) - 5x slower
         wrong_alpha_freq = self._alpha_freq + np.random.uniform(-2, 2)  # Shifted alpha
         
-        delta = 3.0 * np.sin(2 * np.pi * 2.8 * t + np.random.rand() * 0.5)
-        theta = 8.0 * np.sin(2 * np.pi * 6.5 * t + np.random.rand() * 0.5)
-        alpha = 10.0 * np.sin(2 * np.pi * wrong_alpha_freq * t + np.random.rand() * 0.5)  # Weak alpha
-        beta = 15.0 * np.sin(2 * np.pi * 22 * t + np.random.rand() * 0.5)  # High beta (stress)
-        gamma = 5.0 * np.sin(2 * np.pi * 38 * t + np.random.rand() * 0.5)
+        delta = 3.0 * np.sin(2 * np.pi * (2.8 / 5.0) * t + np.random.rand() * 0.5)
+        theta = 8.0 * np.sin(2 * np.pi * (6.5 / 5.0) * t + np.random.rand() * 0.5)
+        alpha = 10.0 * np.sin(2 * np.pi * (wrong_alpha_freq / 5.0) * t + np.random.rand() * 0.5)  # Weak alpha
+        beta = 15.0 * np.sin(2 * np.pi * (22 / 5.0) * t + np.random.rand() * 0.5)  # High beta (stress)
+        gamma = 5.0 * np.sin(2 * np.pi * (38 / 5.0) * t + np.random.rand() * 0.5)
         
         # High noise (poor electrode contact or different person)
         pink_noise = self._generate_pink_noise() * 8.0  # Much higher noise
