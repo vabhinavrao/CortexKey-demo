@@ -266,11 +266,23 @@ class BrainwaveProcessor:
 
 
 class MockDataGenerator:
-    """Generates synthetic EEG data for demonstration and testing."""
+    """
+    Generates realistic synthetic EEG data based on real brainwave characteristics.
+    
+    Based on EEG patterns from PhysioNet EEG Motor Movement/Imagery Dataset
+    and typical occipital/parietal lobe recordings during rest and cognitive tasks.
+    
+    Real EEG characteristics:
+    - Amplitude: 10-100 µV (microvolts)
+    - Slower oscillations with natural drift
+    - 1/f noise (pink noise)
+    - Irregular phase relationships
+    - Occasional artifacts (eye blinks, muscle tension)
+    """
 
     def __init__(self, fs: float, mode: str = MOCK_AUTH_MODE, logger: Optional[logging.Logger] = None):
         """
-        Initialize mock data generator.
+        Initialize mock data generator with realistic EEG parameters.
         
         Args:
             fs: Sampling frequency in Hz
@@ -283,34 +295,195 @@ class MockDataGenerator:
         self._time = 0.0
         self._sample_interval = 1.0 / fs
         
+        # Realistic EEG parameters (microvolts scale)
+        self._baseline_drift = 0.0
+        self._drift_rate = 0.0
+        self._last_blink = 0.0
+        self._last_artifact = 0.0
+        
+        # Individual variability (simulates unique brainwave patterns)
+        np.random.seed(None)  # Ensure different patterns each run
+        self._alpha_freq = np.random.uniform(9.5, 11.5)      # Individual alpha frequency
+        self._alpha_amp = np.random.uniform(15, 35)          # Alpha amplitude in µV
+        self._theta_freq = np.random.uniform(5.5, 7.5)       # Theta frequency
+        self._beta_freq = np.random.uniform(18, 25)          # Beta frequency
+        self._phase_offsets = np.random.uniform(0, 2*np.pi, 5)  # Random phase offsets
+        
+        # 1/f noise generator state
+        self._pink_noise_state = np.zeros(10)
+        
     def set_mode(self, mode: str) -> None:
         """Switch between authenticated and impostor mock modes."""
         if mode not in [MOCK_AUTH_MODE, MOCK_IMPOSTOR_MODE]:
             raise ValueError(f"Invalid mode: {mode}. Use 'authenticated' or 'impostor'")
         self.mode = mode
         self.logger.info(f"Mock mode switched to: {mode}")
+        # Reset variability when changing modes
+        self._alpha_freq = np.random.uniform(9.5, 11.5)
+        self._alpha_amp = np.random.uniform(15, 35)
+    
+    def _generate_pink_noise(self) -> float:
+        """
+        Generate 1/f pink noise (realistic EEG background).
+        Uses Paul Kellet's economy method.
+        """
+        white = np.random.randn() * 0.5
+        self._pink_noise_state[0] = 0.99886 * self._pink_noise_state[0] + white * 0.0555179
+        self._pink_noise_state[1] = 0.99332 * self._pink_noise_state[1] + white * 0.0750759
+        self._pink_noise_state[2] = 0.96900 * self._pink_noise_state[2] + white * 0.1538520
+        self._pink_noise_state[3] = 0.86650 * self._pink_noise_state[3] + white * 0.3104856
+        self._pink_noise_state[4] = 0.55000 * self._pink_noise_state[4] + white * 0.5329522
+        
+        pink = (self._pink_noise_state[0] + self._pink_noise_state[1] + 
+                self._pink_noise_state[2] + self._pink_noise_state[3] + 
+                self._pink_noise_state[4]) * 0.11
+        return pink
+    
+    def _generate_baseline_drift(self) -> float:
+        """
+        Generate slow baseline drift (realistic DC offset changes).
+        Simulates electrode contact changes and physiological drift.
+        """
+        # Very slow random walk
+        self._drift_rate += np.random.randn() * 0.001
+        self._drift_rate *= 0.9995  # Decay towards zero
+        self._baseline_drift += self._drift_rate
+        self._baseline_drift *= 0.9999  # Slowly return to zero
+        return self._baseline_drift
+    
+    def _generate_eye_blink(self, t: float) -> float:
+        """
+        Generate realistic eye blink artifact (large amplitude, ~200ms duration).
+        Blinks occur randomly every 3-8 seconds.
+        """
+        if t - self._last_blink > np.random.uniform(3, 8):
+            self._last_blink = t
+        
+        # Eye blink shape: rapid rise, slower decay
+        time_since_blink = t - self._last_blink
+        if time_since_blink < 0.3:  # 300ms blink duration
+            blink = 80 * np.exp(-((time_since_blink - 0.05) ** 2) / 0.002)
+            return blink
+        return 0.0
+    
+    def _generate_muscle_artifact(self, t: float) -> float:
+        """
+        Generate occasional muscle tension artifact (high frequency burst).
+        Occurs randomly and unpredictably.
+        """
+        if np.random.rand() < 0.001:  # 0.1% chance per sample
+            self._last_artifact = t
+        
+        time_since_artifact = t - self._last_artifact
+        if time_since_artifact < 0.15:  # 150ms artifact duration
+            # High-frequency burst (30-60 Hz muscle noise)
+            artifact = (15 * np.sin(2 * np.pi * 45 * t) * 
+                       np.exp(-time_since_artifact / 0.05))
+            return artifact
+        return 0.0
     
     def generate_authenticated(self, t: float) -> float:
         """
-        Generate authenticated user EEG pattern.
-        Strong alpha (10Hz) + moderate beta (20Hz) + low noise.
+        Generate authenticated user EEG pattern - realistic, consistent brainwave signature.
+        
+        Based on relaxed, eyes-closed resting state with dominant alpha rhythm
+        (typical of real authentication scenarios where user is focused).
+        
+        Characteristics:
+        - Strong, consistent alpha (8-13 Hz) in occipital regions: ~20-30 µV
+        - Moderate theta (4-8 Hz) background: ~10-15 µV
+        - Low beta (13-30 Hz) activity: ~5-10 µV
+        - Small delta (0.5-4 Hz) component: ~5 µV
+        - Pink noise background: ~3-5 µV
+        - Occasional artifacts (realistic but not disruptive)
         """
-        alpha = 2.5 * np.sin(2 * np.pi * 10 * t)       # 10 Hz alpha (dominant)
-        beta = 1.2 * np.sin(2 * np.pi * 20 * t)        # 20 Hz beta
-        theta = 0.6 * np.sin(2 * np.pi * 6 * t)        # 6 Hz theta
-        noise = 0.3 * np.random.randn()                 # Low noise
-        modulation = 1.0 + 0.1 * np.sin(2 * np.pi * 0.3 * t)  # Breathing artifact
-        return (alpha + beta + theta) * modulation + noise
+        # Core frequency components with individual phase offsets
+        delta = 4.0 * np.sin(2 * np.pi * 2.5 * t + self._phase_offsets[0])
+        theta = 12.0 * np.sin(2 * np.pi * self._theta_freq * t + self._phase_offsets[1])
+        alpha = self._alpha_amp * np.sin(2 * np.pi * self._alpha_freq * t + self._phase_offsets[2])
+        beta = 6.0 * np.sin(2 * np.pi * self._beta_freq * t + self._phase_offsets[3])
+        gamma = 2.5 * np.sin(2 * np.pi * 35 * t + self._phase_offsets[4])
+        
+        # Alpha harmonics (realistic non-sinusoidal waves)
+        alpha_harmonic = 3.0 * np.sin(2 * np.pi * self._alpha_freq * 2 * t + self._phase_offsets[2])
+        
+        # Amplitude modulation (alpha blocking/enhancement - realistic variation)
+        alpha_modulation = 1.0 + 0.15 * np.sin(2 * np.pi * 0.1 * t)  # 0.1 Hz modulation
+        theta_modulation = 1.0 + 0.1 * np.sin(2 * np.pi * 0.15 * t + 1.2)
+        
+        # Realistic background noise (pink noise, not white)
+        pink_noise = self._generate_pink_noise() * 3.5
+        
+        # Physiological artifacts (occasional, realistic)
+        baseline_drift = self._generate_baseline_drift()
+        eye_blink = self._generate_eye_blink(t) * 0.3  # Reduced blink in authenticated state
+        muscle_artifact = self._generate_muscle_artifact(t) * 0.5  # Reduced tension
+        
+        # Combine components (in microvolts)
+        signal = (delta + 
+                 theta * theta_modulation + 
+                 alpha * alpha_modulation + 
+                 alpha_harmonic * 0.3 +
+                 beta + 
+                 gamma +
+                 pink_noise +
+                 baseline_drift +
+                 eye_blink +
+                 muscle_artifact)
+        
+        return signal
     
     def generate_impostor(self, t: float) -> float:
         """
-        Generate impostor EEG pattern.
-        High noise, weak/inconsistent oscillations, muscle artifacts.
+        Generate impostor EEG pattern - inconsistent, noisy, irregular brainwaves.
+        
+        Simulates either:
+        1. Different person (different alpha frequency, irregular patterns)
+        2. Poor electrode contact (high noise, weak signals)
+        3. Movement/distraction (high beta, muscle artifacts, unstable)
+        
+        Characteristics:
+        - Weak or shifted alpha peak (different frequency)
+        - Higher noise floor: ~10-15 µV
+        - More muscle artifacts and movement
+        - Inconsistent amplitude and frequency
+        - Elevated beta (stress/anxiety)
         """
-        noise = 1.5 * np.random.randn()                 # High noise
-        weak_signal = 0.3 * np.sin(2 * np.pi * 7.3 * t + np.random.rand() * 2 * np.pi)
-        muscle_artifact = 2.0 * np.random.randn() if np.random.rand() < 0.05 else 0.0
-        return noise + weak_signal + muscle_artifact
+        # Different frequency components (different person's brain)
+        wrong_alpha_freq = self._alpha_freq + np.random.uniform(-2, 2)  # Shifted alpha
+        
+        delta = 3.0 * np.sin(2 * np.pi * 2.8 * t + np.random.rand() * 0.5)
+        theta = 8.0 * np.sin(2 * np.pi * 6.5 * t + np.random.rand() * 0.5)
+        alpha = 10.0 * np.sin(2 * np.pi * wrong_alpha_freq * t + np.random.rand() * 0.5)  # Weak alpha
+        beta = 15.0 * np.sin(2 * np.pi * 22 * t + np.random.rand() * 0.5)  # High beta (stress)
+        gamma = 5.0 * np.sin(2 * np.pi * 38 * t + np.random.rand() * 0.5)
+        
+        # High noise (poor electrode contact or different person)
+        pink_noise = self._generate_pink_noise() * 8.0  # Much higher noise
+        white_noise = np.random.randn() * 5.0
+        
+        # Frequent artifacts (movement, poor contact)
+        baseline_drift = self._generate_baseline_drift() * 2.0  # Worse contact
+        eye_blink = self._generate_eye_blink(t) * 1.5  # More frequent/larger blinks
+        muscle_artifact = self._generate_muscle_artifact(t) * 2.5  # More muscle tension
+        
+        # Random amplitude variations (unstable signal)
+        instability = np.random.randn() * 3.0
+        
+        # Combine components (inconsistent, noisy)
+        signal = (delta + 
+                 theta + 
+                 alpha +  # Weak, wrong frequency alpha
+                 beta +   # High beta
+                 gamma +
+                 pink_noise +
+                 white_noise +
+                 baseline_drift +
+                 eye_blink +
+                 muscle_artifact +
+                 instability)
+        
+        return signal
     
     def get_sample(self) -> float:
         """Get next sample based on current mode."""
